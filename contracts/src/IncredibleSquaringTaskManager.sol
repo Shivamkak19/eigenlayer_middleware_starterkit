@@ -12,6 +12,9 @@ import {OperatorStateRetriever} from "@eigenlayer-middleware/src/OperatorStateRe
 import "@eigenlayer-middleware/src/libraries/BN254.sol";
 import "./IIncredibleSquaringTaskManager.sol";
 
+// NOTE: MODIFIED TO ADD QUESTION FOR IN-CLASS LAB 
+// COS 473 - questions are marked by "FLAG" in comments
+
 contract IncredibleSquaringTaskManager is
     Initializable,
     OwnableUpgradeable,
@@ -46,14 +49,14 @@ contract IncredibleSquaringTaskManager is
     address public aggregator;
     address public generator;
 
+    // FLAG 1: Why might this modifier be used?
     /* MODIFIERS */
     modifier onlyAggregator() {
         require(msg.sender == aggregator, "Aggregator must be the caller");
         _;
     }
 
-    // onlyTaskGenerator is used to restrict createNewTask from only being called by a permissioned entity
-    // in a real world scenario, this would be removed by instead making createNewTask a payable function
+    // FLAG 2: What are the pros/cons of using this modifier vs. making the function it modifies payable instead?
     modifier onlyTaskGenerator() {
         require(msg.sender == generator, "Task generator must be the caller");
         _;
@@ -140,7 +143,7 @@ contract IncredibleSquaringTaskManager is
                 nonSignerStakesAndSignature
             );
 
-        // check that signatories own at least a threshold percentage of each quourm
+        // FLAG 3: What is happening in this for loop?
         for (uint i = 0; i < quorumNumbers.length; i++) {
             // we don't check that the quorumThresholdPercentages are not >100 because a greater value would trivially fail the check, implying
             // signed stake > total stake
@@ -170,6 +173,7 @@ contract IncredibleSquaringTaskManager is
         return latestTaskNum;
     }
 
+    // FLAG 4: What is the purpose of raising a challenge?
     // NOTE: this function enables a challenger to raise and resolve a challenge.
     // TODO: require challenger to pay a bond for raising a challenge
     // TODO(samlaf): should we check that quorumNumbers is same as the one recorded in the task?
@@ -208,7 +212,7 @@ contract IncredibleSquaringTaskManager is
         bool isResponseCorrect = (actualSquaredOutput ==
             taskResponse.numberSquared);
 
-        // if response was correct, no slashing happens so we return
+        // FLAG 5: What would happen is isResponseCorrect == false?
         if (isResponseCorrect == true) {
             emit TaskChallengedUnsuccessfully(referenceTaskIndex, msg.sender);
             return;
@@ -249,72 +253,3 @@ contract IncredibleSquaringTaskManager is
                 address(blsApkRegistry)
             ).pubkeyHashToOperator(hashesOfPubkeysOfNonSigningOperators[i]);
         }
-
-        // @dev the below code is commented out for the upcoming M2 release
-        //      in which there will be no slashing. The slasher is also being redesigned
-        //      so its interface may very well change.
-        // ==========================================
-        // // get the list of all operators who were active when the task was initialized
-        // Operator[][] memory allOperatorInfo = getOperatorState(
-        //     IRegistryCoordinator(address(registryCoordinator)),
-        //     task.quorumNumbers,
-        //     task.taskCreatedBlock
-        // );
-        // // freeze the operators who signed adversarially
-        // for (uint i = 0; i < allOperatorInfo.length; i++) {
-        //     // first for loop iterate over quorums
-
-        //     for (uint j = 0; j < allOperatorInfo[i].length; j++) {
-        //         // second for loop iterate over operators active in the quorum when the task was initialized
-
-        //         // get the operator address
-        //         bytes32 operatorID = allOperatorInfo[i][j].operatorId;
-        //         address operatorAddress = BLSPubkeyRegistry(
-        //             address(blsPubkeyRegistry)
-        //         ).pubkeyCompendium().pubkeyHashToOperator(operatorID);
-
-        //         // check if the operator has already NOT been frozen
-        //         if (
-        //             IServiceManager(
-        //                 address(
-        //                     BLSRegistryCoordinatorWithIndices(
-        //                         address(registryCoordinator)
-        //                     ).serviceManager()
-        //                 )
-        //             ).slasher().isFrozen(operatorAddress) == false
-        //         ) {
-        //             // check whether the operator was a signer for the task
-        //             bool wasSigningOperator = true;
-        //             for (
-        //                 uint k = 0;
-        //                 k < addresssOfNonSigningOperators.length;
-        //                 k++
-        //             ) {
-        //                 if (
-        //                     operatorAddress == addresssOfNonSigningOperators[k]
-        //                 ) {
-        //                     // if the operator was a non-signer, then we set the flag to false
-        //                     wasSigningOperator == false;
-        //                     break;
-        //                 }
-        //             }
-
-        //             if (wasSigningOperator == true) {
-        //                 BLSRegistryCoordinatorWithIndices(
-        //                     address(registryCoordinator)
-        //                 ).serviceManager().freezeOperator(operatorAddress);
-        //             }
-        //         }
-        //     }
-        // }
-
-        // the task response has been challenged successfully
-        taskSuccesfullyChallenged[referenceTaskIndex] = true;
-
-        emit TaskChallengedSuccessfully(referenceTaskIndex, msg.sender);
-    }
-
-    function getTaskResponseWindowBlock() external view returns (uint32) {
-        return TASK_RESPONSE_WINDOW_BLOCK;
-    }
-}
